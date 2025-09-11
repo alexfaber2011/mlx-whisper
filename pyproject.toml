@@ -1,0 +1,19 @@
+[project]
+name = "mlx-project"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mlx>=0.29.0",
+    "mlx-lm>=0.27.1",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.31.0",
+    "python-multipart>=0.0.12",
+    "aiofiles>=24.1.0",
+    "numpy>=1.26.0",
+    "soundfile>=0.12.1",
+    "pydub>=0.25.1",
+    "mlx-whisper>=0.4.0",
+    "wyoming>=1.5.0",
+]

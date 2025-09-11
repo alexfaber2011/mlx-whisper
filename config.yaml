@@ -1,0 +1,37 @@
+# Speech-to-Text Server Configuration
+
+server:
+  host: "0.0.0.0"  # Listen on all interfaces
+  port: 8000       # Server port
+
+model:
+  name: "mlx-community/whisper-large-v3-turbo"  # Whisper model to use
+  # Alternative models:
+  # - mlx-community/whisper-large-v3
+  # - mlx-community/whisper-medium
+  # - mlx-community/whisper-small
+  # - mlx-community/whisper-base
+  # - mlx-community/whisper-tiny
+
+audio:
+  max_file_size_mb: 50  # Maximum audio file size in MB
+  supported_formats:
+    - .wav
+    - .mp3
+    - .m4a
+    - .flac
+    - .ogg
+    - .opus
+    - .webm
+
+# Home Assistant Integration
+home_assistant:
+  # Add this URL to Home Assistant configuration.yaml:
+  # stt:
+  #   - platform: rest
+  #     name: mlx_whisper
+  #     resource: http://<your-server-ip>:8000/api/stt
+  #     method: POST
+  #     sample_rate: 16000
+  #     audio_format: wav
+  default_language: "en"
