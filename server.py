@@ -23,13 +23,15 @@ class WhisperEventHandler(AsyncEventHandler):
 
     def __init__(
         self,
+        reader,
+        writer,
         wyoming_info: Info,
         model_name: str = "mlx-community/whisper-large-v3-turbo",
         language: Optional[str] = None,
         *args,
         **kwargs,
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(reader, writer, *args, **kwargs)
         
         self.wyoming_info = wyoming_info
         self.model_name = model_name
@@ -51,7 +53,7 @@ class WhisperEventHandler(AsyncEventHandler):
             _LOGGER.info(f"Loading Whisper model: {self.model_name}")
             try:
                 self.model = await asyncio.to_thread(
-                    mlx_whisper.load, self.model_name
+                    mlx_whisper.load_models.load_model, self.model_name
                 )
                 _LOGGER.info("Model loaded successfully")
             except Exception as e:
@@ -61,7 +63,10 @@ class WhisperEventHandler(AsyncEventHandler):
     async def handle_event(self, event: Event) -> bool:
         """Handle Wyoming protocol events."""
         
-        if Info.is_type(event.type):
+        _LOGGER.debug(f"Received event: {event.type}")
+        
+        if Info.is_type(event.type) or event.type == "describe":
+            _LOGGER.debug("Sending Wyoming info")
             await self.write_event(self.wyoming_info.event())
             return True
             
@@ -216,15 +221,17 @@ async def main():
         f"tcp://{args.host}:{args.port}"
     )
     
-    try:
-        await server.run(
-            partial(
-                WhisperEventHandler,
-                wyoming_info,
-                model_name=args.model,
-                language=args.language,
-            )
+    def make_handler(reader, writer):
+        return WhisperEventHandler(
+            reader,
+            writer,
+            wyoming_info,
+            model_name=args.model,
+            language=args.language,
         )
+    
+    try:
+        await server.run(make_handler)
     except KeyboardInterrupt:
         _LOGGER.info("Shutting down")
 
