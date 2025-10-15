@@ -3,33 +3,39 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.mlx.whisper.stt</string>
-    
+    <string>com.mlx-whisper.wyoming</string>
+
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
-        <string>/Users/alex/python/mlx-project/run_server.sh</string>
+        <string>__UV_PATH__</string>
+        <string>run</string>
+        <string>python</string>
+        <string>server.py</string>
+        <string>--host</string>
+        <string>0.0.0.0</string>
+        <string>--port</string>
+        <string>10300</string>
     </array>
-    
+
     <key>WorkingDirectory</key>
-    <string>/Users/alex/python/mlx-project</string>
-    
+    <string>__WORKING_DIR__</string>
+
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/Users/alex/.local/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+        <string>__SERVICE_PATH__</string>
     </dict>
-    
+
     <key>RunAtLoad</key>
     <true/>
-    
+
     <key>KeepAlive</key>
     <true/>
-    
+
     <key>StandardOutPath</key>
-    <string>/Users/alex/python/mlx-project/server.log</string>
-    
+    <string>__WORKING_DIR__/server.log</string>
+
     <key>StandardErrorPath</key>
-    <string>/Users/alex/python/mlx-project/server_error.log</string>
+    <string>__WORKING_DIR__/server.log</string>
 </dict>
 </plist>

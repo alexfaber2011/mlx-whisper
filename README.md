@@ -99,6 +99,33 @@ See `config.yaml` for all available options.
 
 Create a LaunchAgent to run the server automatically in the background and restart on system reboot.
 
+#### Option 1: Automated Installation (Easiest)
+
+Use the provided installation script which automatically detects paths and configures the service:
+
+```bash
+# Make scripts executable
+chmod +x install_service.sh uninstall_service.sh
+
+# Install and start the service
+./install_service.sh
+```
+
+The script will:
+- Auto-detect your `uv` installation path
+- Auto-detect your `ffmpeg` location (for audio processing)
+- Configure the service with the correct working directory
+- Install and start the service automatically
+
+To uninstall:
+```bash
+./uninstall_service.sh
+```
+
+#### Option 2: Manual Installation
+
+If you prefer manual setup, follow these steps:
+
 1. **Create a plist file** at `~/Library/LaunchAgents/com.mlx-whisper.wyoming.plist`:
 
 ```xml
