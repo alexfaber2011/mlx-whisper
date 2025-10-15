@@ -2,14 +2,18 @@
 import asyncio
 import io
 import logging
+import os
 import tempfile
 import wave
 from pathlib import Path
 from typing import Optional
 
+# Ensure ffmpeg is in PATH (needed for mlx_whisper)
+if "/opt/homebrew/bin" not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = f"/opt/homebrew/bin:{os.environ.get('PATH', '')}"
+
 import mlx_whisper
 import numpy as np
-from pydub import AudioSegment
 from wyoming.asr import Transcribe, Transcript
 from wyoming.audio import AudioChunk, AudioChunkConverter, AudioStop
 from wyoming.event import Event
@@ -135,7 +139,8 @@ class WhisperEventHandler(AsyncEventHandler):
                 **options
             )
             
-            text = result.get("text", "").strip()
+            text_list = result.get("text", [])
+            text = "".join(text_list).strip() if isinstance(text_list, list) else str(text_list).strip()
             _LOGGER.info(f"Transcription: {text}")
             
             transcript = Transcript(text=text)
