@@ -1,10 +1,22 @@
 # MLX Whisper Wyoming Protocol Server
 
-A Wyoming protocol-compatible speech-to-text server using MLX Whisper, optimized for Apple Silicon Macs.
+A production-ready Wyoming protocol-compatible speech-to-text server using MLX Whisper, optimized for Apple Silicon Macs.
 
 ## Overview
 
 This server implements the Wyoming protocol for automatic speech recognition (ASR) using MLX Whisper, providing fast, on-device transcription that leverages Apple's Metal framework for acceleration on M-series chips.
+
+### Features
+
+- **Wyoming Protocol Compatible** - Works seamlessly with Home Assistant and other Wyoming clients
+- **Apple Silicon Optimized** - Leverages MLX framework for fast inference on M1/M2/M3/M4 chips
+- **YAML Configuration** - Flexible configuration via `config.yaml` with CLI overrides
+- **Model Preloading** - Optional model preloading at startup for instant first transcription
+- **Structured Logging** - JSON or text logging with request IDs for traceability
+- **Performance Metrics** - Built-in metrics tracking (requests, latency, throughput)
+- **Health Check** - Monitor server and model status
+- **Error Handling** - Automatic retry logic with graceful degradation
+- **Production Ready** - Type hints, comprehensive tests, and error handling
 
 ## Requirements
 
@@ -19,15 +31,15 @@ This server implements the Wyoming protocol for automatic speech recognition (AS
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-2. **Install dependencies**:
+2. **Clone or download this repository**
+
+3. **Install dependencies**:
 ```bash
 uv sync
 ```
 
-Or using pip:
-```bash
-pip install -r pyproject.toml
-```
+4. **Configure the server** (optional):
+Edit `config.yaml` to customize settings like port, model, logging format, etc.
 
 ## Running the Server
 
@@ -38,22 +50,52 @@ Run the server directly:
 uv run python server.py
 ```
 
-Or with custom options:
+Or with custom options (CLI arguments override config.yaml):
 ```bash
 uv run python server.py --host 0.0.0.0 --port 10300 --model mlx-community/whisper-large-v3-turbo
 ```
 
 ### Command Line Options
 
-- `--host`: Host to bind to (default: `0.0.0.0`)
-- `--port`: Port to bind to (default: `10300`)
-- `--model`: Whisper model to use (default: `mlx-community/whisper-large-v3-turbo`)
-- `--language`: Default language code (e.g., `en`, `es`, `fr`)
-- `--debug`: Enable debug logging
+- `--config`: Path to configuration file (default: `config.yaml`)
+- `--host`: Host to bind to (overrides config)
+- `--port`: Port to bind to (overrides config)
+- `--model`: Whisper model to use (overrides config)
+- `--language`: Default language code (overrides config, e.g., `en`, `es`, `fr`)
+- `--debug`: Enable debug logging (sets log level to DEBUG)
 
-## Running in Background on Mac Studio
+### Configuration File
 
-### Option 1: Using launchd (Recommended for macOS)
+The server reads settings from `config.yaml` by default. Key settings:
+
+```yaml
+server:
+  host: "0.0.0.0"
+  port: 10300
+  preload_model: true  # Load model at startup
+
+model:
+  name: "mlx-community/whisper-large-v3-turbo"
+  language: null  # null = auto-detect
+  load_retry_count: 3  # Retry on failure
+  load_retry_delay: 5  # Seconds between retries
+
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "text"  # "text" or "json"
+  include_request_ids: true
+
+metrics:
+  enabled: true
+  track_inference_time: true
+  track_audio_duration: true
+```
+
+See `config.yaml` for all available options.
+
+## Running in Background
+
+### Using launchd (Recommended)
 
 Create a LaunchAgent to run the server automatically in the background and restart on system reboot.
 
@@ -135,67 +177,6 @@ launchctl stop com.mlx-whisper.wyoming
 launchctl unload ~/Library/LaunchAgents/com.mlx-whisper.wyoming.plist
 ```
 
-### Option 2: Using nohup (Simple Background Process)
-
-For a simple background process without auto-restart:
-
-1. **Start in background**:
-```bash
-nohup uv run python server.py > server.log 2>&1 &
-```
-
-2. **Save the process ID** (PID):
-```bash
-echo $! > server.pid
-```
-
-3. **Check if running**:
-```bash
-ps aux | grep server.py
-```
-
-4. **View logs**:
-```bash
-tail -f server.log
-```
-
-5. **Stop the server**:
-```bash
-kill $(cat server.pid)
-```
-
-Or find and kill manually:
-```bash
-pkill -f "python server.py"
-```
-
-### Option 3: Using screen or tmux (Terminal Multiplexer)
-
-For persistent terminal sessions:
-
-**Using screen**:
-```bash
-screen -S mlx-whisper
-uv run python server.py
-# Press Ctrl+A then D to detach
-```
-
-Reattach later:
-```bash
-screen -r mlx-whisper
-```
-
-**Using tmux**:
-```bash
-tmux new -s mlx-whisper
-uv run python server.py
-# Press Ctrl+B then D to detach
-```
-
-Reattach later:
-```bash
-tmux attach -t mlx-whisper
-```
 
 ## Testing the Server
 
@@ -249,7 +230,76 @@ This server is compatible with Home Assistant's Wyoming protocol integration:
 1. In Home Assistant, go to Settings � Devices & Services
 2. Click "Add Integration"
 3. Search for "Wyoming Protocol"
-4. Enter your Mac Studio's IP address and port (10300)
+4. Enter your Mac's IP address and port (10300)
+
+## Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+uv run pytest test_server.py -v
+
+# Run with coverage
+uv run pytest test_server.py -v --cov=server
+
+# Run specific test
+uv run pytest test_server.py::TestServerConfig -v
+```
+
+## Performance Monitoring
+
+The server tracks performance metrics automatically when enabled in config.yaml:
+
+- Total requests processed
+- Successful vs failed transcriptions
+- Average inference time
+- Real-time factor (inference time / audio duration)
+- Active connections
+
+Metrics are logged with each transcription. For JSON logging, enable it in config:
+
+```yaml
+logging:
+  format: "json"
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   Wyoming Client                     │
+│              (Home Assistant, etc.)                  │
+└──────────────────┬──────────────────────────────────┘
+                   │ TCP Connection
+                   │ Wyoming Protocol
+┌──────────────────▼──────────────────────────────────┐
+│              AsyncServer (server.py)                 │
+│  ┌────────────────────────────────────────────────┐ │
+│  │   WhisperEventHandler (per connection)         │ │
+│  │   - Handles Wyoming protocol events            │ │
+│  │   - Manages audio buffering                    │ │
+│  │   - Request ID tracking                        │ │
+│  │   - Metrics collection                         │ │
+│  └────────────────┬───────────────────────────────┘ │
+└───────────────────┼───────────────────────────────── ┘
+                    │
+                    │ Loads on startup (if preload=true)
+                    │ or on first request
+┌───────────────────▼───────────────────────────────┐
+│            MLX Whisper Model                      │
+│       (Cached globally, shared across             │
+│             all connections)                      │
+└───────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+- **ServerConfig**: YAML configuration loader with CLI overrides
+- **StructuredLogger**: Supports both text and JSON logging with request IDs
+- **ServerMetrics**: Thread-safe metrics collection
+- **WhisperEventHandler**: Per-connection Wyoming protocol handler
+- **Model Cache**: Global model instance shared across all connections
 
 ## Troubleshooting
 
@@ -257,6 +307,7 @@ This server is compatible with Home Assistant's Wyoming protocol integration:
 - Check if port 10300 is already in use: `lsof -i :10300`
 - Verify Python dependencies are installed: `uv sync`
 - Check logs for errors
+- Verify config.yaml syntax is valid
 
 ### Transcription fails with "No such file or directory: 'ffmpeg'"
 This happens when ffmpeg is not in the PATH used by launchd. To fix:
@@ -278,14 +329,17 @@ This happens when ffmpeg is not in the PATH used by launchd. To fix:
 - Ensure you have enough disk space for model downloads
 - First run will download the model (may take a few minutes)
 - Models are cached in `~/.cache/huggingface/`
+- Check retry settings in config.yaml if models fail to load
 
 ### Permission denied (launchd)
 - Ensure the plist file has correct permissions: `chmod 644 ~/Library/LaunchAgents/com.mlx-whisper.wyoming.plist`
 - Check paths are absolute and correct
+- Verify PATH includes `/opt/homebrew/bin` for ffmpeg access
 
 ### Service not auto-starting on reboot
 - Verify the plist is loaded: `launchctl list | grep mlx-whisper`
 - Check system logs: `log show --predicate 'process == "launchd"' --last 1h`
+- Ensure `RunAtLoad` is set to `true` in the plist file
 
 ## Performance Notes
 
@@ -305,6 +359,51 @@ This happens when ffmpeg is not in the PATH used by launchd. To fix:
 
 Change the model by modifying the `--model` argument in your startup command or plist file.
 
+## What's New in v2.0
+
+This version includes significant enhancements for production use:
+
+### Configuration & Flexibility
+- YAML-based configuration with CLI overrides
+- Model preloading option for faster first transcription
+- Configurable retry logic for model loading
+
+### Observability
+- Structured logging with JSON output support
+- Request ID tracking for distributed tracing
+- Built-in performance metrics (latency, throughput, real-time factor)
+- Health check function for monitoring
+
+### Reliability
+- Automatic retry with exponential backoff
+- Audio buffer size limits
+- Graceful error handling and recovery
+- Global model caching to reduce memory usage
+
+### Developer Experience
+- Comprehensive type hints throughout
+- Unit and integration test suite
+- Better error messages and logging
+
+## API Reference
+
+For detailed API documentation, see the inline docstrings in `server.py`:
+
+- `ServerConfig`: Configuration management
+- `ServerMetrics`: Performance tracking
+- `StructuredLogger`: Flexible logging
+- `WhisperEventHandler`: Wyoming protocol handler
+- `preload_model()`: Model preloading function
+- `get_health_status()`: Health check endpoint
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- All tests pass: `pytest test_server.py -v`
+- Code follows existing style
+- Type hints are included
+- Documentation is updated
+
 ## License
 
-[Add your license here]
+MIT License - See LICENSE file for details

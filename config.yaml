@@ -1,8 +1,9 @@
-# Speech-to-Text Server Configuration
+# MLX Whisper Wyoming Protocol Server Configuration
 
 server:
   host: "0.0.0.0"  # Listen on all interfaces
-  port: 8000       # Server port
+  port: 10300      # Wyoming protocol port (default 10300)
+  preload_model: true  # Load model at startup for faster first transcription
 
 model:
   name: "mlx-community/whisper-large-v3-turbo"  # Whisper model to use
@@ -12,26 +13,26 @@ model:
   # - mlx-community/whisper-small
   # - mlx-community/whisper-base
   # - mlx-community/whisper-tiny
+  language: null  # Default language code (null = auto-detect)
+  load_retry_count: 3  # Number of retries for model loading
+  load_retry_delay: 5  # Delay between retries (seconds)
 
 audio:
-  max_file_size_mb: 50  # Maximum audio file size in MB
-  supported_formats:
-    - .wav
-    - .mp3
-    - .m4a
-    - .flac
-    - .ogg
-    - .opus
-    - .webm
+  max_buffer_size_mb: 100  # Maximum audio buffer size in MB
+  sample_rate: 16000  # Target sample rate
+  channels: 1  # Target channels (mono)
+  width: 2  # Sample width in bytes
 
-# Home Assistant Integration
-home_assistant:
-  # Add this URL to Home Assistant configuration.yaml:
-  # stt:
-  #   - platform: rest
-  #     name: mlx_whisper
-  #     resource: http://<your-server-ip>:8000/api/stt
-  #     method: POST
-  #     sample_rate: 16000
-  #     audio_format: wav
-  default_language: "en"
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "json"  # json or text
+  include_request_ids: true  # Add unique request IDs to logs
+
+metrics:
+  enabled: true  # Enable performance metrics collection
+  track_inference_time: true
+  track_audio_duration: true
+
+health_check:
+  enabled: true  # Enable health check endpoint
+  include_model_status: true  # Include model load status in health check
